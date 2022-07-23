@@ -133,11 +133,11 @@ for i in range(Nruns):
         print(f"Scaled n.{k} by factor {lh_scaled[i,j]} in the {i} scenario")
         j = j + 1 
 
-        # IN PYPSA EARTHLOOP THROUGH (PREPARE &) SOLVE_NETWORK.py
-        #run optimization
-        n.lopf(pyomo=False)
-        # NAME & SAVE EACH OPTIMIZATION RESULT & INCLUDE THE SETTINGS
-        path = os.path.join(os.getcwd(), f"results{i}.nc")
-        n.export_to_netcdf(path)
-        print(f"Run {i}. Load_sum: {n.loads_t.p_set.sum().sum()} MW ")
+    # IN PYPSA EARTHLOOP THROUGH (PREPARE &) SOLVE_NETWORK.py
+    #run optimization
+    n.lopf(pyomo=False)
+    # NAME & SAVE EACH OPTIMIZATION RESULT & INCLUDE THE SETTINGS
+    path = os.path.join(os.getcwd(), f"results{i}.nc")
+    n.export_to_netcdf(path)
+    print(f"Run {i}. Load_sum: {n.loads_t.p_set.sum().sum()} MW ")
 
