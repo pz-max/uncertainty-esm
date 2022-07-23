@@ -21,6 +21,9 @@ conda activate uncertainty-esm
 pip install pypsa pyDOE chaospy pyyaml
 ```
 
-
-
-
+To test the current default implementation run:
+```bash
+python scripts/test.py
+```
+This will create 169 optimizations `result0.nc`, `result1.nc`,... `result168.nc` (takes about 10min)
+Make adjustment in the config.yaml to explore other methods/input options.
