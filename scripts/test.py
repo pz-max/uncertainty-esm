@@ -5,6 +5,7 @@ import pypsa
 import itertools
 import numpy as np
 import os
+import pandas as pd
 
 # pip install pypsa
 # pip install pyDOE2
@@ -125,6 +126,7 @@ for i in range(Nruns):
     n = network.copy()
     j = 0
     for k, v in MONTE_CARLO_PYPSA_FEATURES.items():
+        # this loop sets in one scenario each "i" feature assumption
         # i is the config input key "loads_t.p_set"
         # v is the lower and upper bound [0.8,1.3]
         # j is the sample interation number
@@ -133,10 +135,10 @@ for i in range(Nruns):
         print(f"Scaled n.{k} by factor {lh_scaled[i,j]} in the {i} scenario")
         j = j + 1 
 
-    # IN PYPSA EARTHLOOP THROUGH (PREPARE &) SOLVE_NETWORK.py
-    #run optimization
+    # run optimization
     n.lopf(pyomo=False)
-    # NAME & SAVE EACH OPTIMIZATION RESULT & INCLUDE THE SETTINGS
+    # save each optimization result with a separate name
+    n.monte_carlo = pd.DataFrame(lh_scaled).rename_axis('Nruns').add_suffix('_feature')
     path = os.path.join(os.getcwd(), f"results{i}.nc")
     n.export_to_netcdf(path)
     print(f"Run {i}. Load_sum: {n.loads_t.p_set.sum().sum()} MW ")
