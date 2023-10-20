@@ -15,6 +15,6 @@ monte_carlo:
       # ... user can add here flexibly more features for the Monte-Carlo sampling
     options:
       distribution: "normal" # "uniform", "normal"
-      samples: 4  # number of optimizations
+      samples: 9  # number of optimizations
       sampling_strategy: "chaospy"  # "pydoe2", "chaospy", "scipy", packages that are supported
 

@@ -50,7 +50,7 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_
     lh = uniform_cube.sample(SAMPLES, rule=rule, seed=seed).T
 
     # rescale distribution to 0-1 if it is not a uniform distribution
-    if DISTRIBUTION != "uniform":
+    if DISTRIBUTION != "Uniform":
         mm = MinMaxScaler()
         lh = mm.fit_transform(lh)
 
