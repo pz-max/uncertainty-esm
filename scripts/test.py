@@ -46,13 +46,17 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_
 
     # Generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
     N_FEATURES = f"chaospy.{DISTRIBUTION}(0, 1), "*N_FEATURES
-    uniform_cube = eval(f"chaospy.J({N_FEATURES})")  # writes Nfeatures times the chaospy.uniform... command)
-    lh = uniform_cube.sample(SAMPLES, rule=rule, seed=seed).T
+    cube = eval(f"chaospy.J({N_FEATURES})")  # writes Nfeatures times the chaospy.uniform... command)
+    lh = cube.sample(SAMPLES, rule=rule, seed=seed).T
 
     # rescale distribution to 0-1 if it is not a uniform distribution
-    if DISTRIBUTION != "Uniform":
+    if DISTRIBUTION == "Uniform":
+        pass
+    elif DISTRIBUTION == "NormalDistribution":
         mm = MinMaxScaler()
         lh = mm.fit_transform(lh)
+    else:
+        raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: 'Uniform', 'NormalDistribution'")
 
     discrepancy = qmc.discrepancy(lh)
     print("Discrepancy is:", discrepancy, " more details in function documentation.")
@@ -60,7 +64,7 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_
     return lh
 
 
-def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=1, optimization=None, seed=42):
+def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, optimization=None, seed=42):
     """
     Creates Latin Hypercube Sample (LHS) implementation from SciPy with various options:
     - Center the point within the multi-dimensional grid, centered=True
@@ -77,7 +81,7 @@ def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=1, 
     """
     from scipy.stats import qmc    
     
-    sampler = qmc.LatinHypercube(d=N_FEATURES, centered=centered, strength=1, optimization=optimization, seed=seed)
+    sampler = qmc.LatinHypercube(d=N_FEATURES, centered=centered, strength=strength, optimization=optimization, seed=seed)
     lh = sampler.random(n=SAMPLES)
     discrepancy = qmc.discrepancy(lh)
     print("Discrepancy is:", discrepancy, " more details in function documentation.")
