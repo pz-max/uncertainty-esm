@@ -52,7 +52,7 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_
     # rescale distribution to 0-1 if it is not a uniform distribution
     if DISTRIBUTION == "Uniform":
         pass
-    elif DISTRIBUTION == "NormalDistribution":
+    elif DISTRIBUTION == "Normal":
         mm = MinMaxScaler()
         lh = mm.fit_transform(lh)
     else:
