@@ -56,7 +56,7 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_
         mm = MinMaxScaler()
         lh = mm.fit_transform(lh)
     else:
-        raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: 'Uniform', 'NormalDistribution'")
+        raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: 'Uniform', 'Normal'")
 
     discrepancy = qmc.discrepancy(lh)
     print("Discrepancy is:", discrepancy, " more details in function documentation.")
