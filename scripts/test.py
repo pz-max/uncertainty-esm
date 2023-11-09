@@ -43,7 +43,6 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_
     from scipy.stats import qmc 
     from sklearn.preprocessing import MinMaxScaler
 
-
     # Generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
     N_FEATURES = f"chaospy.{DISTRIBUTION}(0, 1), "*N_FEATURES
     cube = eval(f"chaospy.J({N_FEATURES})")  # writes Nfeatures times the chaospy.uniform... command)
@@ -54,6 +53,9 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_
         pass
     elif DISTRIBUTION == "Normal":
         mm = MinMaxScaler()
+        lh = mm.fit_transform(lh)
+    elif DISTRIBUTION == "LogNormal":
+        mm = MinMaxScaler(feature_range=(0,0.99))
         lh = mm.fit_transform(lh)
     else:
         raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: 'Uniform', 'Normal'")
@@ -110,7 +112,7 @@ U_BOUNDS = [item[1] for item in MONTE_CARLO_PYPSA_FEATURES.values()]
 N_FEATURES = len(MONTE_CARLO_PYPSA_FEATURES)# only counts features when specified in config
 SAMPLES = MONTE_CARLO_OPTIONS.get("samples")   # What is the optimal sampling? Probably depend on amount of features
 SAMPLING_STRATEGY = MONTE_CARLO_OPTIONS.get("sampling_strategy")
-DISTRIBUTION = MONTE_CARLO_OPTIONS.get("distribution").title() # Change the distribution var to title case
+DISTRIBUTION = MONTE_CARLO_OPTIONS.get("distribution") # Change the distribution var to title case
 
 
 ###
