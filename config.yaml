@@ -14,7 +14,7 @@ monte_carlo:
       generators_t.p_max_pu.loc[:, network.generators.carrier == "solar"]: [0.5, 2]
       # ... user can add here flexibly more features for the Monte-Carlo sampling
     options:
-      distribution: "normal" # "uniform", "normal"
-      samples: 9  # number of optimizations. Note that number of samples when using scipy has to be the square of a prime number
+      distribution: "Normal" # "Uniform", "Normal", "LogNormal"
+      samples: 9 # number of optimizations. Note that number of samples when using scipy has to be the square of a prime number
       sampling_strategy: "chaospy"  # "pydoe2", "chaospy", "scipy", packages that are supported
 
