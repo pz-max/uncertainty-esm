@@ -152,7 +152,9 @@ for i in range(Nruns):
     n.lopf(pyomo=False)
     # save each optimization result with a separate name
     n.monte_carlo = pd.DataFrame(lh_scaled).rename_axis('Nruns').add_suffix('_feature')
-    path = os.path.join(os.getcwd(), f"results{i}.nc")
-    n.export_to_netcdf(path)
+    directory_path = os.path.join(os.getcwd(), f"results")
+    os.makedirs(directory_path, exist_ok=True)
+    file_path = os.path.join(directory_path, f"result_{i}.nc")
+    n.export_to_netcdf(file_path)
     print(f"Run {i}. Load_sum: {n.loads_t.p_set.sum().sum()} MW ")
 
