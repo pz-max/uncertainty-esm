@@ -52,8 +52,10 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION
     if DISTRIBUTION == "Uniform":
         pass
     elif DISTRIBUTION in ["Normal", "LogNormal", "Triangle", "Beta", "Gamma"]:
-        mm = MinMaxScaler(feature_range=(0,0.99))
+        mm = MinMaxScaler(feature_range=(0,1.))
         lh = mm.fit_transform(lh)
+        print(lh.max())
+        print(lh.min())
     else:
         raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: 'Uniform', 'Normal', 'LogNormal', 'Triangle', 'Beta', 'Gamma'")
 
