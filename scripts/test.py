@@ -44,7 +44,7 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION
     from sklearn.preprocessing import MinMaxScaler
     params = tuple(DISTRIBUTION_PARAMS)
     # Generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
-    N_FEATURES = f"chaospy.{DISTRIBUTION}{tuple(params)}, "*N_FEATURES
+    N_FEATURES = f"chaospy.{DISTRIBUTION}{params}, "*N_FEATURES
     cube = eval(f"chaospy.J({N_FEATURES})")  # writes Nfeatures times the chaospy.uniform... command)
     lh = cube.sample(SAMPLES, rule=rule, seed=seed).T
 
