@@ -69,8 +69,6 @@ def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION_P
     """
     from scipy.stats import qmc, norm, lognorm, beta, gamma, triang
     from sklearn.preprocessing import MinMaxScaler
-    import matplotlib.pyplot as plt
-    import seaborn as sns
     
     sampler = qmc.LatinHypercube(d=N_FEATURES, centered=centered, strength=strength, optimization=optimization, seed=seed)
     lh = sampler.random(n=SAMPLES)
@@ -104,7 +102,6 @@ def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION_P
 
     mm = MinMaxScaler(feature_range=(0,1), clip=True)
     lh = mm.fit_transform(lh) 
-    sns.displot(lh[:,0], bins=10)
 
     return lh
 
