@@ -42,6 +42,27 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION
     import chaospy
     from scipy.stats import qmc 
     from sklearn.preprocessing import MinMaxScaler
+
+    if DISTRIBUTION == "Triangle":
+        if len(DISTRIBUTION_PARAMS) == 2 and len(DISTRIBUTION_PARAMS) != 3:
+            print(f"{DISTRIBUTION} distribution has to be 3 parameters in the order of [lower_bound, mid_range, upper_bound]")
+            mid = np.mean(DISTRIBUTION_PARAMS)
+            DISTRIBUTION_PARAMS.insert(1, mid) # insert the mean into the middle
+        else:
+            # if values is less than 2 or greater than 3
+            raise ValueError(f"{DISTRIBUTION} distribution has to be 3 parameters in the order of [lower_bound, mid_range, upper_bound]")
+
+    # handling having 0 as values in Beta and Gamma            
+    if DISTRIBUTION in ["Beta", "Gamma"]:
+        if np.min(DISTRIBUTION_PARAMS) <= 0:
+            raise ValueError(f"{DISTRIBUTION} distribution cannot have values lower than zero in parameters")
+
+    # handling cases of less than or greater than 2 parameters for Normal, LogNormal, Uniform, Beta and Gamma
+    if DISTRIBUTION in ["Normal", "LogNormal", "Uniform", "Beta", "Gamma"]:
+        if len(DISTRIBUTION_PARAMS) != 2:
+            raise ValueError(f"{DISTRIBUTION} distribution must have 2 parameters")
+
+
     params = tuple(DISTRIBUTION_PARAMS)
     # Generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
     N_FEATURES = f"chaospy.{DISTRIBUTION}{params}, "*N_FEATURES
