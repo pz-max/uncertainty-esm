@@ -52,7 +52,7 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, rule="latin_hypercube", se
     return lh
 
 
-def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, optimization=None, seed=42):
+def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION_PARAMS, centered=False, strength=2, optimization=None, seed=42):
     """
     Creates Latin Hypercube Sample (LHS) implementation from SciPy with various options:
     - Center the point within the multi-dimensional grid, centered=True
@@ -67,12 +67,44 @@ def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, 
     Documentation for Latin Hypercube: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.LatinHypercube.html#scipy.stats.qmc.LatinHypercube
     Orthogonal LHS is better than basic LHS: https://github.com/scipy/scipy/pull/14546/files, https://en.wikipedia.org/wiki/Latin_hypercube_sampling
     """
-    from scipy.stats import qmc    
+    from scipy.stats import qmc, norm, lognorm, beta, gamma, triang
+    from sklearn.preprocessing import MinMaxScaler
+    import matplotlib.pyplot as plt
+    import seaborn as sns
     
     sampler = qmc.LatinHypercube(d=N_FEATURES, centered=centered, strength=strength, optimization=optimization, seed=seed)
     lh = sampler.random(n=SAMPLES)
     discrepancy = qmc.discrepancy(lh)
     print("Discrepancy is:", discrepancy, " more details in function documentation.")
+    
+
+    if DISTRIBUTION == "Uniform":
+        pass
+    elif DISTRIBUTION == "Normal":
+        mean, std= DISTRIBUTION_PARAMS
+        lh = norm.ppf(lh, mean, std)
+    elif DISTRIBUTION == "LogNormal":
+        mean, std = DISTRIBUTION_PARAMS
+        lh = lognorm.ppf(lh, s=0.90)
+    elif DISTRIBUTION == "Triangle":
+        tri_mean = np.mean(DISTRIBUTION_PARAMS)
+        lh = triang.ppf(lh, tri_mean)
+    elif DISTRIBUTION == "Beta":
+        if np.min(DISTRIBUTION_PARAMS) == 0:
+            raise ValueError(f"{DISTRIBUTION} parameters cannot be less than or equals to zero")
+        a, b = DISTRIBUTION_PARAMS
+        lh = beta.ppf(lh, a, b)
+    elif DISTRIBUTION == "Gamma":
+        if np.min(DISTRIBUTION_PARAMS) == 0:
+            raise ValueError(f"{DISTRIBUTION} parameters cannot be less than or equals to zero")
+        shape, scale = DISTRIBUTION_PARAMS
+        lh = gamma.ppf(lh, shape, scale)
+    else:
+        raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: 'Uniform', 'Normal', 'LogNormal', 'Triangle', 'Beta', 'Gamma'")
+
+    mm = MinMaxScaler(feature_range=(0,1), clip=True)
+    lh = mm.fit_transform(lh) 
+    sns.displot(lh[:,0], bins=10)
 
     return lh
 
@@ -98,6 +130,8 @@ U_BOUNDS = [item[1] for item in MONTE_CARLO_PYPSA_FEATURES.values()]
 N_FEATURES = len(MONTE_CARLO_PYPSA_FEATURES)# only counts features when specified in config
 SAMPLES = MONTE_CARLO_OPTIONS.get("samples")   # What is the optimal sampling? Probably depend on amount of features
 SAMPLING_STRATEGY = MONTE_CARLO_OPTIONS.get("sampling_strategy")
+DISTRIBUTION = MONTE_CARLO_OPTIONS.get("distribution") # Change the distribution var to title case
+DISTRIBUTION_PARAMS = MONTE_CARLO_OPTIONS.get("distribution_params") # Change the distribution var to title case
 
 
 ###
@@ -106,7 +140,7 @@ SAMPLING_STRATEGY = MONTE_CARLO_OPTIONS.get("sampling_strategy")
 if SAMPLING_STRATEGY=="pydoe2":
     lh = monte_carlo_sampling_pydoe2(N_FEATURES, SAMPLES, criterion=None, iteration=None, random_state=42, correlation_matrix=None)
 if SAMPLING_STRATEGY=="scipy":
-    lh = monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, optimization=None, seed=42)
+    lh = monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION_PARAMS, centered=False, strength=2, optimization=None, seed=42)
 if SAMPLING_STRATEGY=="chaospy":
     lh = monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, rule="latin_hypercube", seed=42)   
 
@@ -139,7 +173,8 @@ for i in range(Nruns):
     n.lopf(pyomo=False)
     # save each optimization result with a separate name
     n.monte_carlo = pd.DataFrame(lh_scaled).rename_axis('Nruns').add_suffix('_feature')
-    path = os.path.join(os.getcwd(), f"results{i}.nc")
-    n.export_to_netcdf(path)
+    directory_path = os.path.join(os.getcwd(), f"results")
+    os.makedirs(directory_path, exist_ok=True)
+    file_path = os.path.join(directory_path, f"result_{i}.nc")
+    n.export_to_netcdf(file_path)
     print(f"Run {i}. Load_sum: {n.loads_t.p_set.sum().sum()} MW ")
-
