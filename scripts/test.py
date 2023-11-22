@@ -31,7 +31,7 @@ def monte_carlo_sampling_pydoe2(N_FEATURES, SAMPLES, criterion=None, iteration=N
     return lh
 
 
-def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, rule="latin_hypercube", seed=42):
+def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_hypercube", seed=42):
     """
     Creates Latin Hypercube Sample (LHS) implementation from chaospy.
 
@@ -41,11 +41,23 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, rule="latin_hypercube", se
     """
     import chaospy
     from scipy.stats import qmc 
+    from sklearn.preprocessing import MinMaxScaler
+
 
     # Generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
-    N_FEATURES = "chaospy.Uniform(0, 1), "*N_FEATURES
-    uniform_cube = eval(f"chaospy.J({N_FEATURES})")  # writes Nfeatures times the chaospy.uniform... command)
-    lh = uniform_cube.sample(SAMPLES, rule=rule, seed=seed).T
+    N_FEATURES = f"chaospy.{DISTRIBUTION}(0, 1), "*N_FEATURES
+    cube = eval(f"chaospy.J({N_FEATURES})")  # writes Nfeatures times the chaospy.uniform... command)
+    lh = cube.sample(SAMPLES, rule=rule, seed=seed).T
+
+    # rescale distribution to 0-1 if it is not a uniform distribution
+    if DISTRIBUTION == "Uniform":
+        pass
+    elif DISTRIBUTION == "Normal":
+        mm = MinMaxScaler()
+        lh = mm.fit_transform(lh)
+    else:
+        raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: 'Uniform', 'Normal'")
+
     discrepancy = qmc.discrepancy(lh)
     print("Discrepancy is:", discrepancy, " more details in function documentation.")
 
@@ -131,6 +143,7 @@ DISTRIBUTION = MONTE_CARLO_OPTIONS.get("distribution") # Change the distribution
 DISTRIBUTION_PARAMS = MONTE_CARLO_OPTIONS.get("distribution_params") # Change the distribution var to title case
 
 
+
 ###
 ### SCENARIO CREATION / SAMPLING STRATEGY
 ###
@@ -139,7 +152,7 @@ if SAMPLING_STRATEGY=="pydoe2":
 if SAMPLING_STRATEGY=="scipy":
     lh = monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION_PARAMS, centered=False, strength=2, optimization=None, seed=42)
 if SAMPLING_STRATEGY=="chaospy":
-    lh = monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, rule="latin_hypercube", seed=42)   
+    lh = monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_hypercube", seed=42)   
 
 
 ###
