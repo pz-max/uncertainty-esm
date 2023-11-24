@@ -84,7 +84,7 @@ def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, 
     return lh
 
 
-def validate_parameters(DISTRIBUTION, DISTRIBUTION_PARAMS):
+def validate_parameters(SAMPLING_STRATEGY, DISTRIBUTION, DISTRIBUTION_PARAMS):
     """
     Validates the parameters for a given probability distribution.
 
@@ -98,12 +98,16 @@ def validate_parameters(DISTRIBUTION, DISTRIBUTION_PARAMS):
     - ValueError: If the parameters are invalid for the specified distribution.
     """
 
-    # List of valid distribution types
+    valid_strategy = ["chaospy", "scipy", "pydoe2"]
     valid_distribution = ["Uniform", "Normal", "LogNormal", "Triangle", "Beta", "Gamma"]
+
+    # Check if the sampling strategy is valid
+    if SAMPLING_STRATEGY not in valid_strategy:
+        raise ValueError(f" Invalid sampling strategy: {SAMPLING_STRATEGY}")
 
     # Check if the specified distribution is in the list of valid distributions
     if DISTRIBUTION not in valid_distribution:
-        raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: {valid_distribution}")
+        raise ValueError(f"Unsupported Distribution : {DISTRIBUTION}")
 
     # Check special case for Triangle distribution
     if DISTRIBUTION == "Triangle" and len(DISTRIBUTION_PARAMS) == 2:
@@ -158,7 +162,7 @@ DISTRIBUTION_PARAMS = MONTE_CARLO_OPTIONS.get("distribution_params") # Change th
 
 ### PARAMETERS VALIDATION
 # validates the parameters supplied from config file
-validate_parameters(DISTRIBUTION, DISTRIBUTION_PARAMS)
+validate_parameters(SAMPLING_STRATEGY, DISTRIBUTION, DISTRIBUTION_PARAMS)
 
 ###
 ### SCENARIO CREATION / SAMPLING STRATEGY
