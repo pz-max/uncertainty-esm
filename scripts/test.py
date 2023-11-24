@@ -43,40 +43,15 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION
     from scipy.stats import qmc 
     from sklearn.preprocessing import MinMaxScaler
 
-    if DISTRIBUTION == "Triangle":
-        if len(DISTRIBUTION_PARAMS) == 2 and len(DISTRIBUTION_PARAMS) != 3:
-            print(f"{DISTRIBUTION} distribution has to be 3 parameters in the order of [lower_bound, mid_range, upper_bound]")
-            mid = np.mean(DISTRIBUTION_PARAMS)
-            DISTRIBUTION_PARAMS.insert(1, mid) # insert the mean into the middle
-        else:
-            # if values is less than 2 or greater than 3
-            raise ValueError(f"{DISTRIBUTION} distribution has to be 3 parameters in the order of [lower_bound, mid_range, upper_bound]")
-
-    # handling having 0 as values in Beta and Gamma            
-    if DISTRIBUTION in ["Beta", "Gamma"]:
-        if np.min(DISTRIBUTION_PARAMS) <= 0:
-            raise ValueError(f"{DISTRIBUTION} distribution cannot have values lower than zero in parameters")
-
-    # handling cases of less than or greater than 2 parameters for Normal, LogNormal, Uniform, Beta and Gamma
-    if DISTRIBUTION in ["Normal", "LogNormal", "Uniform", "Beta", "Gamma"]:
-        if len(DISTRIBUTION_PARAMS) != 2:
-            raise ValueError(f"{DISTRIBUTION} distribution must have 2 parameters")
-
-
     params = tuple(DISTRIBUTION_PARAMS)
     # Generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
     N_FEATURES = f"chaospy.{DISTRIBUTION}{params}, "*N_FEATURES
     cube = eval(f"chaospy.J({N_FEATURES})")  # writes Nfeatures times the chaospy.uniform... command)
     lh = cube.sample(SAMPLES, rule=rule, seed=seed).T
 
-    # rescale distribution to 0-1 if it is not a uniform distribution
-    if DISTRIBUTION == "Uniform":
-        pass
-    elif DISTRIBUTION in ["Normal", "LogNormal", "Triangle", "Beta", "Gamma"]:
-        mm = MinMaxScaler(feature_range=(0,1), clip=True)
-        lh = mm.fit_transform(lh)
-    else:
-        raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: 'Uniform', 'Normal', 'LogNormal', 'Triangle', 'Beta', 'Gamma'")
+    # To check the discrepancy of the samples, the values needs to be from 0-1
+    mm = MinMaxScaler(feature_range=(0,1), clip=True)
+    lh = mm.fit_transform(lh)
 
     discrepancy = qmc.discrepancy(lh)
     print("Discrepancy is:", discrepancy, " more details in function documentation.")
@@ -109,6 +84,54 @@ def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, 
     return lh
 
 
+def validate_parameters(DISTRIBUTION, DISTRIBUTION_PARAMS):
+    """
+    Validates the parameters for a given probability distribution.
+
+    Parameters:
+    - DISTRIBUTION: str
+        The name of the probability distribution.
+    - DISTRIBUTION_PARAMS: list
+        The parameters associated with the probability distribution.
+
+    Raises:
+    - ValueError: If the parameters are invalid for the specified distribution.
+    """
+
+    # List of valid distribution types
+    valid_distribution = ["Uniform", "Normal", "LogNormal", "Triangle", "Beta", "Gamma"]
+
+    # Check if the specified distribution is in the list of valid distributions
+    if DISTRIBUTION not in valid_distribution:
+        raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: {valid_distribution}")
+
+    # Check special case for Triangle distribution
+    if DISTRIBUTION == "Triangle" and len(DISTRIBUTION_PARAMS) == 2:
+            print(f"{DISTRIBUTION} distribution has to be 3 parameters in the order of [lower_bound, mid_range, upper_bound]")            
+            # Calculate and insert the mean into the middle
+            DISTRIBUTION_PARAMS.insert(1, np.mean(DISTRIBUTION_PARAMS))
+    elif DISTRIBUTION == "Triangle" and len(DISTRIBUTION_PARAMS) == 3:
+        pass
+    else:
+        # Raise an error if the number of parameters is not 2 or 3
+        raise ValueError(f"{DISTRIBUTION} distribution has to be 3 parameters in the order of [lower_bound, mid_range, upper_bound]")
+
+    # Handling having 0 as values in Beta and Gamma            
+    if DISTRIBUTION in ["Beta", "Gamma"]:
+        # Check if any parameter is less than or equal to 0
+        if np.min(DISTRIBUTION_PARAMS) <= 0:
+            raise ValueError(f"{DISTRIBUTION} distribution cannot have values lower than zero in parameters")
+
+    # Handling cases of less than or greater than 2 parameters for Normal, LogNormal, Uniform, Beta, and Gamma
+    if DISTRIBUTION in ["Normal", "LogNormal", "Uniform", "Beta", "Gamma"]:
+        # Check if the number of parameters is not 2
+        if len(DISTRIBUTION_PARAMS) != 2:
+            raise ValueError(f"{DISTRIBUTION} distribution must have 2 parameters")
+
+    # If all checks pass, return None
+    return None
+
+
 ###
 ### MONTE-CARLO SCENARIO INPUTS
 ###
@@ -133,6 +156,9 @@ SAMPLING_STRATEGY = MONTE_CARLO_OPTIONS.get("sampling_strategy")
 DISTRIBUTION = MONTE_CARLO_OPTIONS.get("distribution") # Change the distribution var to title case
 DISTRIBUTION_PARAMS = MONTE_CARLO_OPTIONS.get("distribution_params") # Change the distribution var to title case
 
+### PARAMETERS VALIDATION
+# validates the parameters supplied from config file
+validate_parameters(DISTRIBUTION, DISTRIBUTION_PARAMS)
 
 ###
 ### SCENARIO CREATION / SAMPLING STRATEGY
