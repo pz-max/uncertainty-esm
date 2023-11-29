@@ -91,9 +91,13 @@ def validate_parameters(sampling_strategy: str, samples: int,
     Inputs from user through the config file needs to be validated before proceeding to perform monte-carlo simulations.
 
     Parameters:
-    - DISTRIBUTION: str
+    - sampling_strategy: str
+        The chosen sampling strategy from chaospy, scipy and pydoe2
+    - samples: int
+        The number of samples to generate for the simulation
+    - distribution: str
         The name of the probability distribution.
-    - DISTRIBUTION_PARAMS: list
+    - distribution_params: list
         The parameters associated with the probability distribution.
 
     Raises:
