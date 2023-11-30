@@ -11,7 +11,6 @@ monte_carlo:
       # TODO: Support inputs to simulate outages of biggest power plant "generators.p_nom.max()": [-1000MW 0MW]
       loads_t.p_set: [0.9, 1.1]
       generators_t.p_max_pu.loc[:, network.generators.carrier == "wind"]: [0.5, 1.2]
-      lines.capital_cost: [0.5, 1.5]
       # ... user can add here flexibly more features for the Monte-Carlo sampling
     options:
       # Uniform: https://chaospy.readthedocs.io/en/master/api/chaospy.Uniform.html
@@ -26,6 +25,7 @@ monte_carlo:
       # [lower_bound, midpoint, upper_bound] for Triangle 
       # [alpha, beta] for Beta
       # [shape, scale] for Gamma
-      distribution_params: [0, 1] 
+      distribution_params: [0, 1]
       samples: 9 # number of optimizations. Note that number of samples when using scipy has to be the square of a prime number
-      sampling_strategy: "scipy"  # "pydoe2", "chaospy", "scipy", packages that are supported
+      sampling_strategy: "chaospy"  # "pydoe2", "chaospy", "scipy", packages that are supported
+
