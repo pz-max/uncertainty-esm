@@ -21,7 +21,7 @@ def monte_carlo_sampling_pydoe2(N_FEATURES, SAMPLES, criterion=None, iteration=N
     Documentation on PyDOE2: https://github.com/clicumu/pyDOE2 (fixes latin_cube errors)
     """
     from pyDOE2 import lhs
-    from scipy.stats import qmc 
+    from scipy.stats import qmc
 
     # Generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
     lh = lhs(N_FEATURES, samples=SAMPLES, criterion=criterion, iterations=iteration, random_state=random_state, correlation_matrix=correlation_matrix)
@@ -31,7 +31,7 @@ def monte_carlo_sampling_pydoe2(N_FEATURES, SAMPLES, criterion=None, iteration=N
     return lh
 
 
-def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_hypercube", seed=42):
+def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION_PARAMS, rule="latin_hypercube", seed=42):
     """
     Creates Latin Hypercube Sample (LHS) implementation from chaospy.
 
@@ -40,23 +40,18 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_
 
     """
     import chaospy
-    from scipy.stats import qmc 
+    from scipy.stats import qmc
     from sklearn.preprocessing import MinMaxScaler
 
-
-    # Generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
-    N_FEATURES = f"chaospy.{DISTRIBUTION}(0, 1), "*N_FEATURES
+    params = tuple(DISTRIBUTION_PARAMS)
+    # generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
+    N_FEATURES = f"chaospy.{DISTRIBUTION}{params}, "*N_FEATURES
     cube = eval(f"chaospy.J({N_FEATURES})")  # writes Nfeatures times the chaospy.uniform... command)
     lh = cube.sample(SAMPLES, rule=rule, seed=seed).T
 
-    # rescale distribution to 0-1 if it is not a uniform distribution
-    if DISTRIBUTION == "Uniform":
-        pass
-    elif DISTRIBUTION == "Normal":
-        mm = MinMaxScaler()
-        lh = mm.fit_transform(lh)
-    else:
-        raise ValueError(f"Distribution '{DISTRIBUTION}' not available. Please pick a valid one from possible options: 'Uniform', 'Normal'")
+    # to check the discrepancy of the samples, the values needs to be from 0-1
+    mm = MinMaxScaler(feature_range=(0,1), clip=True)
+    lh = mm.fit_transform(lh)
 
     discrepancy = qmc.discrepancy(lh)
     print("Discrepancy is:", discrepancy, " more details in function documentation.")
@@ -79,14 +74,87 @@ def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, 
     Documentation for Latin Hypercube: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.LatinHypercube.html#scipy.stats.qmc.LatinHypercube
     Orthogonal LHS is better than basic LHS: https://github.com/scipy/scipy/pull/14546/files, https://en.wikipedia.org/wiki/Latin_hypercube_sampling
     """
-    from scipy.stats import qmc    
-    
+    from scipy.stats import qmc
+
     sampler = qmc.LatinHypercube(d=N_FEATURES, centered=centered, strength=strength, optimization=optimization, seed=seed)
     lh = sampler.random(n=SAMPLES)
     discrepancy = qmc.discrepancy(lh)
     print("Discrepancy is:", discrepancy, " more details in function documentation.")
 
     return lh
+
+
+def validate_parameters(sampling_strategy: str, samples: int,
+                        distribution: str, distribution_params: list) -> None:
+    """
+    Validates the parameters for a given probability distribution.
+    Inputs from user through the config file needs to be validated before proceeding to perform monte-carlo simulations.
+
+    Parameters:
+    - sampling_strategy: str
+        The chosen sampling strategy from chaospy, scipy and pydoe2
+    - samples: int
+        The number of samples to generate for the simulation
+    - distribution: str
+        The name of the probability distribution.
+    - distribution_params: list
+        The parameters associated with the probability distribution.
+
+    Raises:
+    - ValueError: If the parameters are invalid for the specified distribution.
+    """
+
+    valid_strategy = ["chaospy", "scipy", "pydoe2"]
+    valid_distribution = [
+        "Uniform", "Normal", "LogNormal", "Triangle", "Beta", "Gamma"
+    ]
+
+    # verifying samples and distribution_params
+    if samples is None:
+        raise ValueError(f"assign a value to samples")
+    elif type(samples) is float or type(samples) is str:
+        raise ValueError(f"samples must be an integer")
+    elif distribution_params is None or len(distribution_params) == 0:
+        raise ValueError(f"assign a list of parameters to distribution_params")
+
+    # verify sampling strategy
+    if sampling_strategy not in valid_strategy:
+        raise ValueError(
+            f" Invalid sampling strategy: {sampling_strategy}. Choose from {valid_strategy}"
+        )
+
+    # verify distribution
+    if distribution not in valid_distribution:
+        raise ValueError(
+            f"Unsupported Distribution : {distribution}. Choose from {valid_distribution}"
+        )
+
+    # special case handling for Triangle distribution
+    if distribution == "Triangle":
+        if len(distribution_params) == 2:
+            print(
+                f"{distribution} distribution has to be 3 parameters in the order of [lower_bound, mid_range, upper_bound]"
+            )
+            # use the mean as the middle value
+            distribution_params.insert(1, np.mean(distribution_params))
+        elif len(distribution_params) != 3:
+            raise ValueError(
+                f"{distribution} distribution has to be 3 parameters in the order of [lower_bound, mid_range, upper_bound]"
+            )
+
+    # handling having 0 as values in Beta and Gamma
+    if distribution in ["Beta", "Gamma"]:
+        if np.min(distribution_params) <= 0:
+            raise ValueError(
+                f"{distribution} distribution cannot have values lower than zero in parameters"
+            )
+
+    if distribution in ["Normal", "LogNormal", "Uniform", "Beta", "Gamma"]:
+        if len(distribution_params) != 2:
+            raise ValueError(
+                f"{distribution} distribution must have 2 parameters")
+
+    return None
 
 
 ###
@@ -110,8 +178,12 @@ U_BOUNDS = [item[1] for item in MONTE_CARLO_PYPSA_FEATURES.values()]
 N_FEATURES = len(MONTE_CARLO_PYPSA_FEATURES)# only counts features when specified in config
 SAMPLES = MONTE_CARLO_OPTIONS.get("samples")   # What is the optimal sampling? Probably depend on amount of features
 SAMPLING_STRATEGY = MONTE_CARLO_OPTIONS.get("sampling_strategy")
-DISTRIBUTION = MONTE_CARLO_OPTIONS.get("distribution").title() # Change the distribution var to title case
+DISTRIBUTION = MONTE_CARLO_OPTIONS.get("distribution") # Change the distribution var to title case
+DISTRIBUTION_PARAMS = MONTE_CARLO_OPTIONS.get("distribution_params")
 
+### PARAMETERS VALIDATION
+# validates the parameters supplied from config file
+validate_parameters(SAMPLING_STRATEGY, SAMPLES, DISTRIBUTION, DISTRIBUTION_PARAMS)
 
 ###
 ### SCENARIO CREATION / SAMPLING STRATEGY
@@ -121,13 +193,13 @@ if SAMPLING_STRATEGY=="pydoe2":
 if SAMPLING_STRATEGY=="scipy":
     lh = monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, optimization=None, seed=42)
 if SAMPLING_STRATEGY=="chaospy":
-    lh = monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, rule="latin_hypercube", seed=42)   
+    lh = monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION_PARAMS, rule="latin_hypercube", seed=42)
 
 
 ###
 ### SCENARIO ITERATION
 ###
-from scipy.stats import qmc 
+from scipy.stats import qmc
 
 network = pypsa.examples.ac_dc_meshed(from_master=True)
 
@@ -146,13 +218,14 @@ for i in range(Nruns):
         # Example: n.loads_t.p_set = network.loads_t.p_set = .loads_t.p_set * lh[0,0] * (1.3-0.8)
         exec(f"n.{k} = network.{k} * {lh_scaled[i,j]}")
         print(f"Scaled n.{k} by factor {lh_scaled[i,j]} in the {i} scenario")
-        j = j + 1 
+        j = j + 1
 
     # run optimization
     n.lopf(pyomo=False)
     # save each optimization result with a separate name
     n.monte_carlo = pd.DataFrame(lh_scaled).rename_axis('Nruns').add_suffix('_feature')
-    path = os.path.join(os.getcwd(), f"results{i}.nc")
-    n.export_to_netcdf(path)
+    directory_path = os.path.join(os.getcwd(), f"results")
+    os.makedirs(directory_path, exist_ok=True)
+    file_path = os.path.join(directory_path, f"result_{i}.nc")
+    n.export_to_netcdf(file_path)
     print(f"Run {i}. Load_sum: {n.loads_t.p_set.sum().sum()} MW ")
-
