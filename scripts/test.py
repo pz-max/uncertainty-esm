@@ -13,7 +13,14 @@ import pandas as pd
 # pip install chaospy
 
 
-def monte_carlo_sampling_pydoe2(N_FEATURES, SAMPLES, criterion=None, iteration=None, random_state=42, correlation_matrix=None):
+def monte_carlo_sampling_pydoe2(
+    N_FEATURES,
+    SAMPLES,
+    criterion=None,
+    iteration=None,
+    random_state=42,
+    correlation_matrix=None,
+):
     """
     Creates Latin Hypercube Sample (LHS) implementation from PyDOE2 with various options. Additionally all "corners" are simulated.
 
@@ -24,14 +31,28 @@ def monte_carlo_sampling_pydoe2(N_FEATURES, SAMPLES, criterion=None, iteration=N
     from scipy.stats import qmc
 
     # Generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
-    lh = lhs(N_FEATURES, samples=SAMPLES, criterion=criterion, iterations=iteration, random_state=random_state, correlation_matrix=correlation_matrix)
+    lh = lhs(
+        N_FEATURES,
+        samples=SAMPLES,
+        criterion=criterion,
+        iterations=iteration,
+        random_state=random_state,
+        correlation_matrix=correlation_matrix,
+    )
     discrepancy = qmc.discrepancy(lh)
     print("Discrepancy is:", discrepancy, " more details in function documentation.")
 
     return lh
 
 
-def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION_PARAMS, rule="latin_hypercube", seed=42):
+def monte_carlo_sampling_chaospy(
+    N_FEATURES,
+    SAMPLES,
+    DISTRIBUTION,
+    DISTRIBUTION_PARAMS,
+    rule="latin_hypercube",
+    seed=42,
+):
     """
     Creates Latin Hypercube Sample (LHS) implementation from chaospy.
 
@@ -45,21 +66,33 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION
 
     params = tuple(DISTRIBUTION_PARAMS)
     # generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
-    N_FEATURES = f"chaospy.{DISTRIBUTION}{params}, "*N_FEATURES
-    cube = eval(f"chaospy.J({N_FEATURES})")  # writes Nfeatures times the chaospy.uniform... command)
+    N_FEATURES = f"chaospy.{DISTRIBUTION}{params}, " * N_FEATURES
+    cube = eval(
+        f"chaospy.J({N_FEATURES})"
+    )  # writes Nfeatures times the chaospy.uniform... command)
     lh = cube.sample(SAMPLES, rule=rule, seed=seed).T
 
     # to check the discrepancy of the samples, the values needs to be from 0-1
-    mm = MinMaxScaler(feature_range=(0,1), clip=True)
+    mm = MinMaxScaler(feature_range=(0, 1), clip=True)
     lh = mm.fit_transform(lh)
 
     discrepancy = qmc.discrepancy(lh)
-    print("Discrepancy is:", discrepancy, " more details in function documentation.")
+    print("Discrepancy is:", discrepancy,
+          " more details in function documentation.")
 
     return lh
 
 
-def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, optimization=None, seed=42):
+def monte_carlo_sampling_scipy(
+    N_FEATURES,
+    SAMPLES,
+    DISTRIBUTION,
+    DISTRIBUTION_PARAMS,
+    centered=False,
+    strength=2,
+    optimization=None,
+    seed=42,
+):
     """
     Creates Latin Hypercube Sample (LHS) implementation from SciPy with various options:
     - Center the point within the multi-dimensional grid, centered=True
@@ -74,18 +107,50 @@ def monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, 
     Documentation for Latin Hypercube: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.LatinHypercube.html#scipy.stats.qmc.LatinHypercube
     Orthogonal LHS is better than basic LHS: https://github.com/scipy/scipy/pull/14546/files, https://en.wikipedia.org/wiki/Latin_hypercube_sampling
     """
-    from scipy.stats import qmc
+    from scipy.stats import qmc, norm, lognorm, beta, gamma, triang
+    from sklearn.preprocessing import MinMaxScaler
 
-    sampler = qmc.LatinHypercube(d=N_FEATURES, centered=centered, strength=strength, optimization=optimization, seed=seed)
+    sampler = qmc.LatinHypercube(
+        d=N_FEATURES,
+        centered=centered,
+        strength=strength,
+        optimization=optimization,
+        seed=seed,
+    )
+
     lh = sampler.random(n=SAMPLES)
+
+    if DISTRIBUTION == "Uniform":
+        pass
+    elif DISTRIBUTION == "Normal":
+        mean, std = DISTRIBUTION_PARAMS
+        lh = norm.ppf(lh, mean, std)
+    elif DISTRIBUTION == "LogNormal":
+        mean, std = DISTRIBUTION_PARAMS
+        lh = lognorm.ppf(lh, s=0.90)
+    elif DISTRIBUTION == "Triangle":
+        tri_mean = np.mean(DISTRIBUTION_PARAMS)
+        lh = triang.ppf(lh, tri_mean)
+    elif DISTRIBUTION == "Beta":
+        a, b = DISTRIBUTION_PARAMS
+        lh = beta.ppf(lh, a, b)
+    elif DISTRIBUTION == "Gamma":
+        shape, scale = DISTRIBUTION_PARAMS
+        lh = gamma.ppf(lh, shape, scale)
+
+    # samples space needs to be from 0 to 1
+    mm = MinMaxScaler(feature_range=(0, 1), clip=True)
+    lh = mm.fit_transform(lh)
+
     discrepancy = qmc.discrepancy(lh)
     print("Discrepancy is:", discrepancy, " more details in function documentation.")
 
     return lh
 
 
-def validate_parameters(sampling_strategy: str, samples: int,
-                        distribution: str, distribution_params: list) -> None:
+def validate_parameters(
+    sampling_strategy: str, samples: int, distribution: str, distribution_params: list
+) -> None:
     """
     Validates the parameters for a given probability distribution.
     Inputs from user through the config file needs to be validated before proceeding to perform monte-carlo simulations.
@@ -105,9 +170,7 @@ def validate_parameters(sampling_strategy: str, samples: int,
     """
 
     valid_strategy = ["chaospy", "scipy", "pydoe2"]
-    valid_distribution = [
-        "Uniform", "Normal", "LogNormal", "Triangle", "Beta", "Gamma"
-    ]
+    valid_distribution = ["Uniform", "Normal", "LogNormal", "Triangle", "Beta", "Gamma"]
 
     # verifying samples and distribution_params
     if samples is None:
@@ -142,17 +205,16 @@ def validate_parameters(sampling_strategy: str, samples: int,
                 f"{distribution} distribution has to be 3 parameters in the order of [lower_bound, mid_range, upper_bound]"
             )
 
+    if distribution in ["Normal", "LogNormal", "Uniform", "Beta", "Gamma"]:
+        if len(distribution_params) != 2:
+            raise ValueError(f"{distribution} distribution must have 2 parameters")
+
     # handling having 0 as values in Beta and Gamma
     if distribution in ["Beta", "Gamma"]:
         if np.min(distribution_params) <= 0:
             raise ValueError(
                 f"{distribution} distribution cannot have values lower than zero in parameters"
             )
-
-    if distribution in ["Normal", "LogNormal", "Uniform", "Beta", "Gamma"]:
-        if len(distribution_params) != 2:
-            raise ValueError(
-                f"{distribution} distribution must have 2 parameters")
 
     return None
 
@@ -171,14 +233,22 @@ with open(path, "r") as stream:
         print(exc)
 
 # remove all empty strings from config dictionary
-MONTE_CARLO_PYPSA_FEATURES = {k: v for k, v in config["monte_carlo"]["pypsa_standard"].items() if v}  # removes key value pairs with empty value e.g. []
+MONTE_CARLO_PYPSA_FEATURES = {
+    k: v for k, v in config["monte_carlo"]["pypsa_standard"].items() if v
+}  # removes key value pairs with empty value e.g. []
 MONTE_CARLO_OPTIONS = config["monte_carlo"]["options"]
 L_BOUNDS = [item[0] for item in MONTE_CARLO_PYPSA_FEATURES.values()]
 U_BOUNDS = [item[1] for item in MONTE_CARLO_PYPSA_FEATURES.values()]
-N_FEATURES = len(MONTE_CARLO_PYPSA_FEATURES)# only counts features when specified in config
-SAMPLES = MONTE_CARLO_OPTIONS.get("samples")   # What is the optimal sampling? Probably depend on amount of features
+N_FEATURES = len(
+    MONTE_CARLO_PYPSA_FEATURES
+)  # only counts features when specified in config
+SAMPLES = MONTE_CARLO_OPTIONS.get(
+    "samples"
+)  # What is the optimal sampling? Probably depend on amount of features
 SAMPLING_STRATEGY = MONTE_CARLO_OPTIONS.get("sampling_strategy")
-DISTRIBUTION = MONTE_CARLO_OPTIONS.get("distribution") # Change the distribution var to title case
+DISTRIBUTION = MONTE_CARLO_OPTIONS.get(
+    "distribution"
+)  # Change the distribution var to title case
 DISTRIBUTION_PARAMS = MONTE_CARLO_OPTIONS.get("distribution_params")
 
 ### PARAMETERS VALIDATION
@@ -188,12 +258,35 @@ validate_parameters(SAMPLING_STRATEGY, SAMPLES, DISTRIBUTION, DISTRIBUTION_PARAM
 ###
 ### SCENARIO CREATION / SAMPLING STRATEGY
 ###
-if SAMPLING_STRATEGY=="pydoe2":
-    lh = monte_carlo_sampling_pydoe2(N_FEATURES, SAMPLES, criterion=None, iteration=None, random_state=42, correlation_matrix=None)
-if SAMPLING_STRATEGY=="scipy":
-    lh = monte_carlo_sampling_scipy(N_FEATURES, SAMPLES, centered=False, strength=2, optimization=None, seed=42)
-if SAMPLING_STRATEGY=="chaospy":
-    lh = monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION_PARAMS, rule="latin_hypercube", seed=42)
+if SAMPLING_STRATEGY == "pydoe2":
+    lh = monte_carlo_sampling_pydoe2(
+        N_FEATURES,
+        SAMPLES,
+        criterion=None,
+        iteration=None,
+        random_state=42,
+        correlation_matrix=None,
+    )
+if SAMPLING_STRATEGY == "scipy":
+    lh = monte_carlo_sampling_scipy(
+        N_FEATURES,
+        SAMPLES,
+        DISTRIBUTION,
+        DISTRIBUTION_PARAMS,
+        centered=False,
+        strength=2,
+        optimization=None,
+        seed=42,
+    )
+if SAMPLING_STRATEGY == "chaospy":
+    lh = monte_carlo_sampling_chaospy(
+        N_FEATURES,
+        SAMPLES,
+        DISTRIBUTION,
+        DISTRIBUTION_PARAMS,
+        rule="latin_hypercube",
+        seed=42,
+    )
 
 
 ###
@@ -223,7 +316,7 @@ for i in range(Nruns):
     # run optimization
     n.lopf(pyomo=False)
     # save each optimization result with a separate name
-    n.monte_carlo = pd.DataFrame(lh_scaled).rename_axis('Nruns').add_suffix('_feature')
+    n.monte_carlo = pd.DataFrame(lh_scaled).rename_axis("Nruns").add_suffix("_feature")
     directory_path = os.path.join(os.getcwd(), f"results")
     os.makedirs(directory_path, exist_ok=True)
     file_path = os.path.join(directory_path, f"result_{i}.nc")
