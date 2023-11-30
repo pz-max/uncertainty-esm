@@ -44,12 +44,12 @@ def monte_carlo_sampling_chaospy(N_FEATURES, SAMPLES, DISTRIBUTION, DISTRIBUTION
     from sklearn.preprocessing import MinMaxScaler
 
     params = tuple(DISTRIBUTION_PARAMS)
-    # Generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
+    # generate a Nfeatures-dimensional latin hypercube varying between 0 and 1:
     N_FEATURES = f"chaospy.{DISTRIBUTION}{params}, "*N_FEATURES
     cube = eval(f"chaospy.J({N_FEATURES})")  # writes Nfeatures times the chaospy.uniform... command)
     lh = cube.sample(SAMPLES, rule=rule, seed=seed).T
 
-    # To check the discrepancy of the samples, the values needs to be from 0-1
+    # to check the discrepancy of the samples, the values needs to be from 0-1
     mm = MinMaxScaler(feature_range=(0,1), clip=True)
     lh = mm.fit_transform(lh)
 
@@ -129,7 +129,7 @@ def validate_parameters(sampling_strategy: str, samples: int,
             f"Unsupported Distribution : {distribution}. Choose from {valid_distribution}"
         )
 
-    # Special case handling for Triangle distribution
+    # special case handling for Triangle distribution
     if distribution == "Triangle":
         if len(distribution_params) == 2:
             print(
@@ -142,21 +142,18 @@ def validate_parameters(sampling_strategy: str, samples: int,
                 f"{distribution} distribution has to be 3 parameters in the order of [lower_bound, mid_range, upper_bound]"
             )
 
-    # Handling having 0 as values in Beta and Gamma
+    # handling having 0 as values in Beta and Gamma
     if distribution in ["Beta", "Gamma"]:
-        # Check if any parameter is less than or equal to 0
         if np.min(distribution_params) <= 0:
             raise ValueError(
                 f"{distribution} distribution cannot have values lower than zero in parameters"
             )
 
-    # Handling cases of less than or greater than 2 parameters for Normal, LogNormal, Uniform, Beta, and Gamma
     if distribution in ["Normal", "LogNormal", "Uniform", "Beta", "Gamma"]:
         if len(distribution_params) != 2:
             raise ValueError(
                 f"{distribution} distribution must have 2 parameters")
 
-    # If all checks pass, return None
     return None
 
 
