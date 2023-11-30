@@ -77,7 +77,8 @@ def monte_carlo_sampling_chaospy(
     lh = mm.fit_transform(lh)
 
     discrepancy = qmc.discrepancy(lh)
-    print("Discrepancy is:", discrepancy, " more details in function documentation.")
+    print("Discrepancy is:", discrepancy,
+          " more details in function documentation.")
 
     return lh
 
@@ -137,12 +138,12 @@ def monte_carlo_sampling_scipy(
         shape, scale = DISTRIBUTION_PARAMS
         lh = gamma.ppf(lh, shape, scale)
 
+    # samples space needs to be from 0 to 1
     mm = MinMaxScaler(feature_range=(0, 1), clip=True)
     lh = mm.fit_transform(lh)
 
     discrepancy = qmc.discrepancy(lh)
-    print("Discrepancy is:", discrepancy,
-          " more details in function documentation.")
+    print("Discrepancy is:", discrepancy, " more details in function documentation.")
 
     return lh
 
